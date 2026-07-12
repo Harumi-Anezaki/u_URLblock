@@ -268,6 +268,9 @@ class OverlayApp:
             self.manager.data = {"date": today_str, "usage": {k: 0 for k in self.time_limits}}
             self.manager.save_data()
 
+        # 別プロセスのモニターが更新した利用時間データを再読み込み
+        self.manager.data = self.manager.load_data()
+
         for domain, limit in self.time_limits.items():
             used = self.manager.get_usage(domain)
             remaining = max(0, limit - used)
@@ -289,6 +292,16 @@ class OverlayApp:
                 else:
                     pb.configure(progress_color="#1f538d")
 
+        # モニターからのステータステキストを読み取る
+        try:
+            status_path = os.path.join(BASE_DIR, "status.txt")
+            if os.path.exists(status_path):
+                with open(status_path, "r", encoding="utf-8") as f:
+                    status_text = f.read().strip()
+                self.set_status(status_text)
+        except:
+            pass
+
         self.root.after(1000, self.update_gui)
 
     def set_status(self, text):
@@ -303,149 +316,15 @@ class OverlayApp:
             self.status_frame.configure(fg_color="#1f538d")
 
 # ==========================================
-# 監視ロジッククラス化
+# ウォッチドッグロジック
 # ==========================================
-class URLMonitor:
-    def __init__(self, app, manager, config):
-        self.app = app
-        self.manager = manager
-        self.config = config
-        self.white_list = config.get("WHITE_LIST", [])
-        self.time_limits = config.get("TIME_LIMITS", {})
-        self.block_list = config.get("BLOCK_LIST", [])
-        self.cdp_url = "http://127.0.0.1:9222/json"
-
-    def start(self):
-        t = threading.Thread(target=self._monitor_loop, daemon=True)
-        t.start()
-        
-        t_watch = threading.Thread(target=self._watchdog_loop, daemon=True)
-        t_watch.start()
-
-    def _watchdog_loop(self):
-        while True:
-            try:
-                ensure_processes_running(BASE_DIR, MY_FILENAME, TARGETS)
-            except:
-                pass
-            time.sleep(0.2)
-
-    def _ensure_chrome_debug_mode(self):
+def watchdog_loop():
+    while True:
         try:
-            req = urllib.request.Request(self.cdp_url)
-            with urllib.request.urlopen(req, timeout=1.0) as response:
-                return True
+            ensure_processes_running(BASE_DIR, MY_FILENAME, TARGETS)
         except:
             pass
-            
-        if hasattr(self, 'chrome_started_time') and time.time() - self.chrome_started_time < 15:
-            return False
-            
-        try:
-            exes = get_running_exes()
-            if "chrome.exe" not in exes:
-                return False
-                
-            subprocess.run(["taskkill", "/F", "/IM", "chrome.exe", "/T"], capture_output=True, creationflags=0x08000000)
-            time.sleep(1)
-        except:
-            return False
-            
-        chrome_paths = [
-            os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
-            os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
-            os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe")
-        ]
-        for path in chrome_paths:
-            if os.path.exists(path):
-                subprocess.Popen([path, "--remote-debugging-port=9222", "--restore-last-session", "--hide-crash-restore-bubble"], creationflags=0x08000000)
-                self.chrome_started_time = time.time()
-                time.sleep(2)
-                break
-        return False
-
-    def _perform_block(self, tab_id):
-        try:
-            req = urllib.request.Request(f"http://127.0.0.1:9222/json/close/{tab_id}", method="GET")
-            with urllib.request.urlopen(req, timeout=1) as response:
-                pass
-        except:
-            pass
-
-    def _monitor_loop(self):
-        last_check_time = time.time()
-        while True:
-            try:
-                now = time.time()
-                elapsed_seconds = now - last_check_time
-                last_check_time = now
-
-                self._ensure_chrome_debug_mode()
-
-                status_priority = 0
-                status_text = "💤  Idle"
-                counted_domains = set()
-
-                try:
-                    req = urllib.request.Request(self.cdp_url)
-                    with urllib.request.urlopen(req, timeout=2) as response:
-                        tabs = json.loads(response.read().decode('utf-8'))
-                except:
-                    tabs = []
-
-                for tab in tabs:
-                    if tab.get("type") != "page":
-                        continue
-                        
-                    current_url = tab.get("url", "")
-                    tab_id = tab.get("id")
-                    if not current_url or current_url.startswith("chrome://") or current_url.startswith("devtools://"):
-                        continue
-
-                    url_base = current_url.split('?')[0]
-
-                    whitelisted_word = next((w for w in self.white_list if w in url_base), None)
-                    if whitelisted_word:
-                        if status_priority < 1:
-                            status_text = f"🛡️  Allowed: {whitelisted_word}"
-                            status_priority = 1
-                        continue
-
-                    blocked_word = next((w for w in self.block_list if w in url_base), None)
-                    if blocked_word:
-                        status_text = f"🚫  BLOCKED: {blocked_word}"
-                        status_priority = 4
-                        self._perform_block(tab_id)
-                        continue
-
-                    limited_domain = next((d for d in self.time_limits if d in current_url), None)
-                    if limited_domain:
-                        if limited_domain not in counted_domains:
-                            self.manager.add_usage(limited_domain, elapsed_seconds)
-                            counted_domains.add(limited_domain)
-
-                        used = self.manager.get_usage(limited_domain)
-                        limit = self.time_limits[limited_domain]
-
-                        if used >= limit:
-                            status_text = f"⌛  TIME UP: {limited_domain}"
-                            status_priority = 3
-                            self._perform_block(tab_id)
-                        else:
-                            if status_priority < 2:
-                                status_text = f"⏱  Counting: {limited_domain}"
-                                status_priority = 2
-                    else:
-                        if status_priority < 1:
-                            status_text = "✅  Safe Browsing"
-                            status_priority = 1
-
-                self.app.set_status(status_text)
-
-            except Exception:
-                pass
-
-            time.sleep(1.0)
+        time.sleep(0.5)
 
 # ==========================================
 # メイン (エラーログ機能付き)
@@ -465,8 +344,10 @@ def main():
     root = ctk.CTk()
     
     app = OverlayApp(root, manager, config)
-    monitor = URLMonitor(app, manager, config)
-    monitor.start()
+    
+    import threading
+    t_watch = threading.Thread(target=watchdog_loop, daemon=True)
+    t_watch.start()
 
     root.mainloop()
 
