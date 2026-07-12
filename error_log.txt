@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "C:\AAAAA_PC\01_exe\URLブロック\実行.pyw", line 543, in <module>
+    main()
+    ~~~~^^
+  File "C:\AAAAA_PC\01_exe\URLブロック\実行.pyw", line 529, in main
+    app  =  OverlayApp(root,  manager)
+  File "C:\AAAAA_PC\01_exe\URLブロック\実行.pyw", line 185, in __init__
+    self.main_scroll = ctk.CTkScrollableFrame(root, fg_color="transparent", scrollbar_button_color=("#f0f2f5", "#242424"), scrollbar_button_hover_color=("#f0f2f5", "#242424"))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\aneha\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\customtkinter\windows\widgets\ctk_scrollable_frame.py", line 60, in __init__
+    self._scrollbar = CTkScrollbar(master=self._parent_frame, orientation="vertical", command=self._parent_canvas.yview,
+                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                   fg_color=scrollbar_fg_color, button_color=scrollbar_button_color, button_hover_color=scrollbar_button_hover_color)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\aneha\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\customtkinter\windows\widgets\ctk_scrollbar.py", line 52, in __init__
+    self._button_color = ThemeManager.theme["CTkScrollbar"]["button_color"] if button_color is None else self._check_color_type(button_color)
+                                                                                                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\aneha\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\customtkinter\windows\widgets\appearance_mode\appearance_mode_base_class.py", line 55, in _check_color_type
+    raise ValueError(f"transparency is not allowed for this attribute")
+ValueError: transparency is not allowed for this attribute
