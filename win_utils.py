@@ -1,25 +1,10 @@
-# -*- coding: utf-8 -*-
-import time
-import subprocess
 import os
 import ctypes
 from ctypes import wintypes
-
-# ==========================================
-# 設定
-# ==========================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MY_FILENAME = os.path.basename(__file__)
-
-PYTHON_BIN = r"C:\Users\aneha\AppData\Local\Python\pythoncore-3.14-64"
-TARGETS = [
-    ("実行.pyw", os.path.join(PYTHON_BIN, "AudioDG_helper.exe")),
-    ("監視.pyw", os.path.join(PYTHON_BIN, "FontHost_worker.exe")),
-    ("WinLogonAssist.exe", os.path.join(BASE_DIR, "WinLogonAssist", "WinLogonAssist.exe")),
-]
-# ==========================================
+import subprocess
 
 TH32CS_SNAPPROCESS = 2
+DWMWA_CLOAKED = 14
 
 class PROCESSENTRY32(ctypes.Structure):
     _fields_ = [
@@ -34,6 +19,21 @@ class PROCESSENTRY32(ctypes.Structure):
         ("dwFlags", wintypes.DWORD),
         ("szExeFile", ctypes.c_char * 260)
     ]
+
+def is_window_cloaked(hwnd):
+    cloaked = wintypes.DWORD()
+    try:
+        res = ctypes.windll.dwmapi.DwmGetWindowAttribute(
+            hwnd, 
+            DWMWA_CLOAKED, 
+            ctypes.byref(cloaked), 
+            ctypes.sizeof(cloaked)
+        )
+        if res == 0:
+            return bool(cloaked.value)
+    except Exception:
+        pass
+    return False
 
 def get_running_exes():
     kernel32 = ctypes.windll.kernel32
@@ -62,37 +62,20 @@ def get_running_exes():
     CloseHandle(hProcessSnap)
     return exes
 
-def ensure_processes_running():
+def ensure_processes_running(base_dir, my_filename, targets):
     try:
         exes = get_running_exes()
         
-        for script_name, exe_name in TARGETS:
-            if script_name == MY_FILENAME:
-                continue # 自分自身は監視対象から外す
+        for script_name, exe_name in targets:
+            if script_name == my_filename:
+                continue
             
             exe_basename = os.path.basename(exe_name)
             if exe_basename.lower() not in exes:
-                # 死んでいるプロセスを見つけたら再起動
-                script_path = os.path.join(BASE_DIR, script_name)
+                script_path = os.path.join(base_dir, script_name)
                 if script_name.endswith('.exe'):
-                    subprocess.Popen([exe_name], creationflags=0x08000000, cwd=BASE_DIR)
+                    subprocess.Popen([exe_name], creationflags=0x08000000, cwd=base_dir)
                 else:
-                    subprocess.Popen([exe_name, script_path], creationflags=0x08000000, cwd=BASE_DIR)
-    except:
-        pass
-
-def main():
-    ERROR_ALREADY_EXISTS = 183
-    mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "URLBlocker_Watcher_Mutex_07")
-    if ctypes.windll.kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
-        return
-
-    while True:
-        try:
-            ensure_processes_running()
-        except:
-            pass
-        time.sleep(0.2) # 0.2秒間隔で監視
-
-if __name__ == "__main__":
-    main()
+                    subprocess.Popen([exe_name, script_path], creationflags=0x08000000, cwd=base_dir)
+    except Exception as e:
+        print(f"Error in ensure_processes_running: {e}")
