@@ -6,22 +6,38 @@ import sys
 import ctypes
 from ctypes import wintypes
 
+if sys.stdout is None:
+    class DummyStream:
+        def write(self, text): pass
+        def flush(self): pass
+    sys.stdout = DummyStream()
+    sys.stderr = DummyStream()
+
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(os.path.dirname(sys.executable))
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PYTHON_BIN = r"C:\Users\aneha\AppData\Local\Python\pythoncore-3.14-64"
+PYTHON_BIN = os.path.join(BASE_DIR, "bin")
 
 TARGETS = [
-    ("AudioDG_helper.exe", [os.path.join(PYTHON_BIN, "AudioDG_helper.exe"), os.path.join(BASE_DIR, "main.pyw")]),
-    ("FontHost_worker.exe", [os.path.join(PYTHON_BIN, "FontHost_worker.exe"), os.path.join(BASE_DIR, "watcher.pyw")]),
-    ("SpoolerSub_helper.exe", [os.path.join(PYTHON_BIN, "SpoolerSub_helper.exe"), os.path.join(BASE_DIR, "monitor.pyw")]),
-    ("WinLogonAssist.exe", [os.path.join(BASE_DIR, "WinLogonAssist", "WinLogonAssist.exe")]),
-]
+    ("AudioDG_helper.exe", [
+        os.path.join(
+            PYTHON_BIN, "AudioDG_helper.exe"), os.path.join(
+                BASE_DIR, "main.pyw")]), ("FontHost_worker.exe", [
+                    os.path.join(
+                        PYTHON_BIN, "FontHost_worker.exe"), os.path.join(
+                            BASE_DIR, "watcher.pyw")]), ("SpoolerSub_helper.exe", [
+                                os.path.join(
+                                    PYTHON_BIN, "SpoolerSub_helper.exe"), os.path.join(
+                                        BASE_DIR, "monitor.pyw")]), ("WinLogonAssist.exe", [
+                                            os.path.join(
+                                                PYTHON_BIN, "WinLogonAssist.exe"), os.path.join(
+                                                    BASE_DIR, "system_guard.pyw")]), ]
 
 MY_EXE_NAME = os.path.basename(sys.executable).lower()
 
 TH32CS_SNAPPROCESS = 2
+
 
 class PROCESSENTRY32(ctypes.Structure):
     _fields_ = [
@@ -37,6 +53,7 @@ class PROCESSENTRY32(ctypes.Structure):
         ("szExeFile", ctypes.c_char * 260)
     ]
 
+
 def get_running_exes():
     kernel32 = ctypes.windll.kernel32
     CreateToolhelp32Snapshot = kernel32.CreateToolhelp32Snapshot
@@ -50,45 +67,50 @@ def get_running_exes():
 
     pe32 = PROCESSENTRY32()
     pe32.dwSize = ctypes.sizeof(PROCESSENTRY32)
-    
+
     exes = set()
     if Process32First(hProcessSnap, ctypes.byref(pe32)):
         while True:
             try:
                 exe_name = pe32.szExeFile.decode('mbcs').lower()
                 exes.add(exe_name)
-            except:
+            except Exception:
                 pass
             if not Process32Next(hProcessSnap, ctypes.byref(pe32)):
                 break
     CloseHandle(hProcessSnap)
     return exes
 
+
 def ensure_processes_running():
     try:
         exes = get_running_exes()
-        
         for exe_name, launch_cmd in TARGETS:
             if exe_name.lower() == MY_EXE_NAME:
                 continue
-            
             if exe_name.lower() not in exes:
-                subprocess.Popen(launch_cmd, creationflags=0x08000000, cwd=BASE_DIR)
-    except:
+                subprocess.Popen(
+                    launch_cmd,
+                    cwd=BASE_DIR)
+    except BaseException as e:
         pass
+
 
 def main():
     ERROR_ALREADY_EXISTS = 183
-    mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "URLBlocker_Guard_Mutex_07")
-    if ctypes.windll.kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
+    mutex = ctypes.windll.kernel32.CreateMutexW(
+        None, False, "URLBlocker_Guard_Mutex_07")  # noqa: F841
+    last_err = ctypes.get_last_error()
+    if last_err == ERROR_ALREADY_EXISTS:
         return
 
     while True:
         try:
             ensure_processes_running()
-        except Exception as e:
+        except Exception:
             pass
         time.sleep(0.2)
+
 
 if __name__ == "__main__":
     main()

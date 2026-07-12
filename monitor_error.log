@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "C:\AAAAA_many\app\u_URLblock\monitor.pyw", line 197, in <module>
+    main()
+  File "C:\AAAAA_many\app\u_URLblock\monitor.pyw", line 188, in main
+    config = load_config()
+             ^^^^^^^^^^^
+NameError: name 'load_config' is not defined

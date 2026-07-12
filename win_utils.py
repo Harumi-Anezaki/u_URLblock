@@ -6,6 +6,7 @@ import subprocess
 TH32CS_SNAPPROCESS = 2
 DWMWA_CLOAKED = 14
 
+
 class PROCESSENTRY32(ctypes.Structure):
     _fields_ = [
         ("dwSize", wintypes.DWORD),
@@ -20,13 +21,14 @@ class PROCESSENTRY32(ctypes.Structure):
         ("szExeFile", ctypes.c_char * 260)
     ]
 
+
 def is_window_cloaked(hwnd):
     cloaked = wintypes.DWORD()
     try:
         res = ctypes.windll.dwmapi.DwmGetWindowAttribute(
-            hwnd, 
-            DWMWA_CLOAKED, 
-            ctypes.byref(cloaked), 
+            hwnd,
+            DWMWA_CLOAKED,
+            ctypes.byref(cloaked),
             ctypes.sizeof(cloaked)
         )
         if res == 0:
@@ -34,6 +36,7 @@ def is_window_cloaked(hwnd):
     except Exception:
         pass
     return False
+
 
 def get_running_exes():
     kernel32 = ctypes.windll.kernel32
@@ -48,34 +51,37 @@ def get_running_exes():
 
     pe32 = PROCESSENTRY32()
     pe32.dwSize = ctypes.sizeof(PROCESSENTRY32)
-    
+
     exes = set()
     if Process32First(hProcessSnap, ctypes.byref(pe32)):
         while True:
             try:
                 exe_name = pe32.szExeFile.decode('mbcs').lower()
                 exes.add(exe_name)
-            except:
+            except BaseException:
                 pass
             if not Process32Next(hProcessSnap, ctypes.byref(pe32)):
                 break
     CloseHandle(hProcessSnap)
     return exes
 
+
 def ensure_processes_running(base_dir, my_filename, targets):
     try:
         exes = get_running_exes()
-        
+
         for script_name, exe_name in targets:
             if script_name == my_filename:
                 continue
-            
+
             exe_basename = os.path.basename(exe_name)
             if exe_basename.lower() not in exes:
                 script_path = os.path.join(base_dir, script_name)
                 if script_name.endswith('.exe'):
-                    subprocess.Popen([exe_name], creationflags=0x08000000, cwd=base_dir)
+                    subprocess.Popen(
+                        [exe_name], creationflags=0x08000000, cwd=base_dir)
                 else:
-                    subprocess.Popen([exe_name, script_path], creationflags=0x08000000, cwd=base_dir)
+                    subprocess.Popen([exe_name, script_path],
+                                     creationflags=0x08000000, cwd=base_dir)
     except Exception as e:
         print(f"Error in ensure_processes_running: {e}")
