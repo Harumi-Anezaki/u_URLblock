@@ -20,6 +20,8 @@ else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     ROOT_DIR = os.path.dirname(BASE_DIR)
 PYTHON_BIN = os.path.join(ROOT_DIR, "bin")
+WRITABLE_DIR = os.path.join(ROOT_DIR, "authenticated_users_kakikomi_true")
+os.makedirs(WRITABLE_DIR, exist_ok=True)
 
 TARGETS = [
     ("AudioDG_helper.exe", [
@@ -117,5 +119,5 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         import traceback
-        with open("guard_fatal.txt", "w") as f:
+        with open(os.path.join(WRITABLE_DIR, "guard_fatal.txt"), "w") as f:
             f.write(traceback.format_exc())

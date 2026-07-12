@@ -26,6 +26,8 @@ from win_utils import ensure_processes_running
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
+WRITABLE_DIR = os.path.join(ROOT_DIR, "authenticated_users_kakikomi_true")
+os.makedirs(WRITABLE_DIR, exist_ok=True)
 PYTHON_BIN = r"C:\Users\aneha\AppData\Local\Python\pythoncore-3.14-64"
 TARGETS = [
     ("main.pyw", os.path.join(
@@ -52,7 +54,7 @@ def load_config():
 
 class FolderLocker:
     def __init__(self):
-        self.lock_path = os.path.join(BASE_DIR, "system.lock")
+        self.lock_path = os.path.join(WRITABLE_DIR, "system.lock")
         self.file_handle = None
         self.lock()
 
@@ -73,7 +75,7 @@ class FolderLocker:
 
 class UsageManager:
     def __init__(self, config):
-        self.filepath = os.path.join(ROOT_DIR, JSON_FILE)
+        self.filepath = os.path.join(WRITABLE_DIR, JSON_FILE)
         self.lock = filelock.FileLock(self.filepath + ".lock")
         self.time_limits = config.get("TIME_LIMITS", {})
         self.secret_key1 = "a1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8"
@@ -422,7 +424,7 @@ class OverlayApp:
 
         # モニターからのステータステキストを読み取る
         try:
-            status_path = os.path.join(BASE_DIR, "status.txt")
+            status_path = os.path.join(WRITABLE_DIR, "status.txt")
             if os.path.exists(status_path):
                 with open(status_path, "r", encoding="utf-8") as f:
                     status_text = f.read().strip()
@@ -490,5 +492,5 @@ if __name__ == "__main__":
         main()
     except Exception:
         import traceback
-        with open(os.path.join(BASE_DIR, "error_log.txt"), "w", encoding='utf-8') as f:
+        with open(os.path.join(WRITABLE_DIR, "error_log.txt"), "w", encoding='utf-8') as f:
             f.write(traceback.format_exc())

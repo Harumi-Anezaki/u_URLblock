@@ -17,6 +17,8 @@ import uiautomation as auto
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
+WRITABLE_DIR = os.path.join(ROOT_DIR, "authenticated_users_kakikomi_true")
+os.makedirs(WRITABLE_DIR, exist_ok=True)
 CONFIG_FILE = "config.json"
 STATUS_FILE = "status.txt"
 
@@ -210,12 +212,12 @@ class URLMonitor:
                             status_priority = 1
 
                 # ステータスをファイルに書き出してGUI側に伝える
-                with open(os.path.join(BASE_DIR, STATUS_FILE), "w", encoding='utf-8') as f:
+                with open(os.path.join(WRITABLE_DIR, STATUS_FILE), "w", encoding='utf-8') as f:
                     f.write(status_text)
 
             except Exception as e:
                 import traceback
-                with open(os.path.join(BASE_DIR, "loop_error.txt"), "a", encoding="utf-8") as err_f:
+                with open(os.path.join(WRITABLE_DIR, "loop_error.txt"), "a", encoding="utf-8") as err_f:
                     err_f.write(traceback.format_exc() + "\n")
 
             time.sleep(1.0)
@@ -240,5 +242,5 @@ if __name__ == "__main__":
         main()
     except Exception:
         import traceback
-        with open(os.path.join(BASE_DIR, "monitor_error.log"), "w", encoding='utf-8') as f:
+        with open(os.path.join(WRITABLE_DIR, "monitor_error.log"), "w", encoding='utf-8') as f:
             f.write(traceback.format_exc())
