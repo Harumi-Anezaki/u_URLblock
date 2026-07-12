@@ -16,6 +16,7 @@ if sys.stdout is None:
 import uiautomation as auto
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
 CONFIG_FILE = "config.json"
 STATUS_FILE = "status.txt"
 
@@ -77,6 +78,20 @@ class URLMonitor:
             return "chiebukuro.yahoo.co.jp"
         if "yahoo" in title:
             return "yahoo.co.jp"
+
+        # 動的マッチング：設定されたブロックリスト・制限リストから推測する
+        all_domains = list(self.block_list) + list(self.time_limits.keys())
+        title_no_spaces = title.replace(' ', '')
+        
+        for domain in all_domains:
+            if 'notion' in domain.lower():
+                continue
+            clean_domain = domain.split('/')[0]
+            parts = clean_domain.split('.')
+            main_part = parts[0] if parts[0] != 'www' else parts[1]
+            if len(main_part) > 2 and main_part in title_no_spaces:
+                return domain
+                
         return None
 
     def _extract_url(self, hwnd, title):
@@ -130,11 +145,13 @@ class URLMonitor:
                     length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
                     buff = ctypes.create_unicode_buffer(length + 1)
                     ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
-                    if 'Google Chrome' in buff.value and ctypes.windll.user32.IsWindowVisible(hwnd):
+                    title = buff.value
+                    title_clean = title.replace('\u200b', '')
+                    if ('Google Chrome' in title_clean or 'Microsoft Edge' in title_clean) and ctypes.windll.user32.IsWindowVisible(hwnd):
                         class_buff = ctypes.create_unicode_buffer(256)
                         ctypes.windll.user32.GetClassNameW(hwnd, class_buff, 256)
                         if 'Chrome_WidgetWin_1' in class_buff.value:
-                            hwnds.append((hwnd, buff.value))
+                            hwnds.append((hwnd, title))
                     return True
 
                 EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
@@ -196,8 +213,10 @@ class URLMonitor:
                 with open(os.path.join(BASE_DIR, STATUS_FILE), "w", encoding='utf-8') as f:
                     f.write(status_text)
 
-            except Exception:
-                pass
+            except Exception as e:
+                import traceback
+                with open(os.path.join(BASE_DIR, "loop_error.txt"), "a", encoding="utf-8") as err_f:
+                    err_f.write(traceback.format_exc() + "\n")
 
             time.sleep(1.0)
 

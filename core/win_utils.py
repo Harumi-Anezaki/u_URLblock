@@ -78,10 +78,8 @@ def ensure_processes_running(base_dir, my_filename, targets):
             if exe_basename.lower() not in exes:
                 script_path = os.path.join(base_dir, script_name)
                 if script_name.endswith('.exe'):
-                    subprocess.Popen(
-                        [exe_name], creationflags=0x08000000, cwd=base_dir)
+                    subprocess.Popen([exe_name], creationflags=0x08000000, cwd=base_dir, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 else:
-                    subprocess.Popen([exe_name, script_path],
-                                     creationflags=0x08000000, cwd=base_dir)
+                    subprocess.Popen([exe_name, script_path], creationflags=0x08000000, cwd=base_dir, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         print(f"Error in ensure_processes_running: {e}")

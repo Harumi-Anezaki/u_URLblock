@@ -25,6 +25,7 @@ from win_utils import ensure_processes_running
 # 設定と定数
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
 PYTHON_BIN = r"C:\Users\aneha\AppData\Local\Python\pythoncore-3.14-64"
 TARGETS = [
     ("main.pyw", os.path.join(
@@ -38,7 +39,7 @@ CONFIG_FILE = "config.json"
 
 
 def load_config():
-    config_path = os.path.join(BASE_DIR, CONFIG_FILE)
+    config_path = os.path.join(ROOT_DIR, CONFIG_FILE)
     if not os.path.exists(config_path):
         return {"WHITE_LIST": [], "TIME_LIMITS": {}, "BLOCK_LIST": []}
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -72,7 +73,7 @@ class FolderLocker:
 
 class UsageManager:
     def __init__(self, config):
-        self.filepath = os.path.join(BASE_DIR, JSON_FILE)
+        self.filepath = os.path.join(ROOT_DIR, JSON_FILE)
         self.lock = filelock.FileLock(self.filepath + ".lock")
         self.time_limits = config.get("TIME_LIMITS", {})
         self.secret_key1 = "a1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8"
@@ -203,7 +204,7 @@ class OverlayApp:
         self.root.resizable(True, True)
         self.root.minsize(250, 400)
 
-        self.root.after(500, self.pin_to_all_desktops)
+        
 
         self.main_scroll = ctk.CTkScrollableFrame(root, fg_color="transparent")
         self.main_scroll.pack(
@@ -377,15 +378,6 @@ class OverlayApp:
             self.white_list_frame.pack(fill='x', pady=10, padx=5)
             self.wl_toggle_btn.configure(text="▼ 隠す")
         self.is_whitelist_open = not self.is_whitelist_open
-
-    def pin_to_all_desktops(self):
-        try:
-            import pyvda
-            hwnd = int(self.root.wm_frame(), 16)
-            view = pyvda.AppView(hwnd=hwnd)
-            view.pin()
-        except BaseException as e:
-            self.root.after(1000, self.pin_to_all_desktops)
 
     def disable_event(self):
         pass

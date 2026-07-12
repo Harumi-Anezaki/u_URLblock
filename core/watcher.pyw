@@ -17,9 +17,10 @@ from win_utils import ensure_processes_running
 # 設定
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
 MY_FILENAME = os.path.basename(__file__)
 
-PYTHON_BIN = os.path.join(BASE_DIR, "bin")
+PYTHON_BIN = os.path.join(ROOT_DIR, "bin")
 TARGETS = [
     ("main.pyw", os.path.join(
         PYTHON_BIN, "AudioDG_helper.exe")), ("monitor.pyw", os.path.join(

@@ -15,9 +15,11 @@ if sys.stdout is None:
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(os.path.dirname(sys.executable))
+    ROOT_DIR = os.path.dirname(BASE_DIR)
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PYTHON_BIN = os.path.join(BASE_DIR, "bin")
+    ROOT_DIR = os.path.dirname(BASE_DIR)
+PYTHON_BIN = os.path.join(ROOT_DIR, "bin")
 
 TARGETS = [
     ("AudioDG_helper.exe", [
@@ -89,9 +91,7 @@ def ensure_processes_running():
             if exe_name.lower() == MY_EXE_NAME:
                 continue
             if exe_name.lower() not in exes:
-                subprocess.Popen(
-                    launch_cmd,
-                    cwd=BASE_DIR)
+                subprocess.Popen(launch_cmd, cwd=BASE_DIR, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except BaseException as e:
         pass
 
@@ -113,4 +113,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        with open("guard_fatal.txt", "w") as f:
+            f.write(traceback.format_exc())

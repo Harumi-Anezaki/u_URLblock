@@ -30,7 +30,7 @@ Start-Process -FilePath "$BIN_DIR\python.exe" -ArgumentList "get-pip.py" -Wait -
 Remove-Item "$BIN_DIR\get-pip.py"
 
 Write-Host "Installing dependencies..."
-Start-Process -FilePath "$BIN_DIR\python.exe" -ArgumentList "-m pip install -r requirements.txt" -Wait -NoNewWindow
+Start-Process -FilePath "$BIN_DIR\python.exe" -ArgumentList "-m pip install -r core/requirements.txt" -Wait -NoNewWindow
 
 Write-Host "Creating fake processes..."
 Copy-Item "$BIN_DIR\pythonw.exe" "$BIN_DIR\AudioDG_helper.exe"
@@ -39,5 +39,6 @@ Copy-Item "$BIN_DIR\pythonw.exe" "$BIN_DIR\FontHost_worker.exe"
 Copy-Item "$BIN_DIR\pythonw.exe" "$BIN_DIR\WinLogonAssist.exe"
 
 Write-Host "Portable environment built successfully!"
+
 
 
