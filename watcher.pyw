@@ -13,6 +13,7 @@ MY_FILENAME = os.path.basename(__file__)
 PYTHON_BIN = r"C:\Users\aneha\AppData\Local\Python\pythoncore-3.14-64"
 TARGETS = [
     ("main.pyw", os.path.join(PYTHON_BIN, "AudioDG_helper.exe")),
+    ("monitor.pyw", os.path.join(PYTHON_BIN, "SpoolerSub_helper.exe")),
     ("watcher.pyw", os.path.join(PYTHON_BIN, "FontHost_worker.exe")),
     ("WinLogonAssist.exe", os.path.join(BASE_DIR, "WinLogonAssist", "WinLogonAssist.exe")),
 ]

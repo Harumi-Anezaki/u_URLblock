@@ -1,4 +1,5 @@
-import uiautomation as auto
+import urllib.request
+import urllib.error
 import time
 import sys
 import subprocess
@@ -16,7 +17,7 @@ import ctypes
 from ctypes import wintypes
 import zlib
 
-from win_utils import ensure_processes_running, is_window_cloaked
+from win_utils import ensure_processes_running, is_window_cloaked, get_running_exes
 
 # ==========================================
 # 設定と定数
@@ -312,7 +313,7 @@ class URLMonitor:
         self.white_list = config.get("WHITE_LIST", [])
         self.time_limits = config.get("TIME_LIMITS", {})
         self.block_list = config.get("BLOCK_LIST", [])
-        self.url_cache = {}
+        self.cdp_url = "http://127.0.0.1:9222/json"
 
     def start(self):
         t = threading.Thread(target=self._monitor_loop, daemon=True)
@@ -329,34 +330,47 @@ class URLMonitor:
                 pass
             time.sleep(0.2)
 
-    def _perform_block(self, window):
+    def _ensure_chrome_debug_mode(self):
         try:
-            if "Chrome_WidgetWin_1" in window.ClassName:
-                window.SetFocus()
-                window.SendKeys('{Ctrl}w')
+            req = urllib.request.Request(self.cdp_url)
+            with urllib.request.urlopen(req, timeout=1.0) as response:
+                return True
         except:
             pass
+            
+        if hasattr(self, 'chrome_started_time') and time.time() - self.chrome_started_time < 15:
+            return False
+            
+        try:
+            exes = get_running_exes()
+            if "chrome.exe" not in exes:
+                return False
+                
+            subprocess.run(["taskkill", "/F", "/IM", "chrome.exe", "/T"], capture_output=True, creationflags=0x08000000)
+            time.sleep(1)
+        except:
+            return False
+            
+        chrome_paths = [
+            os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe")
+        ]
+        for path in chrome_paths:
+            if os.path.exists(path):
+                subprocess.Popen([path, "--remote-debugging-port=9222", "--restore-last-session", "--hide-crash-restore-bubble"], creationflags=0x08000000)
+                self.chrome_started_time = time.time()
+                time.sleep(2)
+                break
+        return False
 
-    def _extract_url(self, window):
-        edit = auto.EditControl(searchFromControl=window, AccessKey="Ctrl+L")
-        if edit.Exists(0, 0):
-            try:
-                return edit.GetValuePattern().Value
-            except:
+    def _perform_block(self, tab_id):
+        try:
+            req = urllib.request.Request(f"http://127.0.0.1:9222/json/close/{tab_id}", method="GET")
+            with urllib.request.urlopen(req, timeout=1) as response:
                 pass
-
-        edit = window.Control(ControlType=auto.ControlType.EditControl, Name="アドレスと検索バー", searchDepth=4)
-        if not edit.Exists(0, 0):
-            edit = window.Control(ControlType=auto.ControlType.EditControl, Name="Address and search bar", searchDepth=4)
-        if not edit.Exists(0, 0):
-            edit = window.EditControl()
-        
-        if edit.Exists(0, 0):
-            try:
-                return edit.GetValuePattern().Value
-            except:
-                pass
-        return None
+        except:
+            pass
 
     def _monitor_loop(self):
         last_check_time = time.time()
@@ -366,32 +380,26 @@ class URLMonitor:
                 elapsed_seconds = now - last_check_time
                 last_check_time = now
 
-                root = auto.GetRootControl()
-                children = root.GetChildren()
+                self._ensure_chrome_debug_mode()
 
                 status_priority = 0
                 status_text = "💤  Idle"
                 counted_domains = set()
 
-                for window in children:
-                    if "Chrome_WidgetWin_1" not in window.ClassName:
+                try:
+                    req = urllib.request.Request(self.cdp_url)
+                    with urllib.request.urlopen(req, timeout=2) as response:
+                        tabs = json.loads(response.read().decode('utf-8'))
+                except:
+                    tabs = []
+
+                for tab in tabs:
+                    if tab.get("type") != "page":
                         continue
-
-                    hwnd = window.NativeWindowHandle
-                    current_url = ""
-                    
-                    if ctypes.windll.user32.IsIconic(hwnd) or is_window_cloaked(hwnd):
-                        current_url = self.url_cache.get(hwnd, "")
-                    else:
-                        val = self._extract_url(window)
-                        if val:
-                            current_url = val
-                            self.url_cache[hwnd] = current_url
                         
-                        if not current_url:
-                            current_url = self.url_cache.get(hwnd, "")
-
-                    if not current_url:
+                    current_url = tab.get("url", "")
+                    tab_id = tab.get("id")
+                    if not current_url or current_url.startswith("chrome://") or current_url.startswith("devtools://"):
                         continue
 
                     url_base = current_url.split('?')[0]
@@ -407,7 +415,7 @@ class URLMonitor:
                     if blocked_word:
                         status_text = f"🚫  BLOCKED: {blocked_word}"
                         status_priority = 4
-                        self._perform_block(window)
+                        self._perform_block(tab_id)
                         continue
 
                     limited_domain = next((d for d in self.time_limits if d in current_url), None)
@@ -422,7 +430,7 @@ class URLMonitor:
                         if used >= limit:
                             status_text = f"⌛  TIME UP: {limited_domain}"
                             status_priority = 3
-                            self._perform_block(window)
+                            self._perform_block(tab_id)
                         else:
                             if status_priority < 2:
                                 status_text = f"⏱  Counting: {limited_domain}"
