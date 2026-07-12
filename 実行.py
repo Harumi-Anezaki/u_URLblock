@@ -320,6 +320,23 @@ class OverlayApp:
 #  ==========================================
 #  監視ロジック
 #  ==========================================
+DWMWA_CLOAKED = 14
+
+def is_window_cloaked(hwnd):
+    cloaked = wintypes.DWORD()
+    try:
+        res = ctypes.windll.dwmapi.DwmGetWindowAttribute(
+            hwnd, 
+            DWMWA_CLOAKED, 
+            ctypes.byref(cloaked), 
+            ctypes.sizeof(cloaked)
+        )
+        if res == 0:
+            return bool(cloaked.value)
+    except Exception:
+        pass
+    return False
+
 def  watchdog_thread():
         """他のすべての監視プロセスが生きているか0.2秒ごとに一括チェックする専用スレッド"""
         while  True:
@@ -364,6 +381,11 @@ def  monitor_thread(app,  manager):
                                         continue
 
                                 hwnd = window.NativeWindowHandle
+                                
+                                # 最小化されているか、他の仮想デスクトップにある（Cloaked）場合はスキップ
+                                if ctypes.windll.user32.IsIconic(hwnd) or is_window_cloaked(hwnd):
+                                        continue
+
                                 current_url  =  ""
                                 
                                 # 1. 高速なショートカットキーでの検索
