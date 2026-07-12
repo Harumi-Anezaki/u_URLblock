@@ -203,6 +203,8 @@ class OverlayApp:
         self.root.resizable(True, True)
         self.root.minsize(250, 400)
 
+        self.root.after(500, self.pin_to_all_desktops)
+
         self.main_scroll = ctk.CTkScrollableFrame(root, fg_color="transparent")
         self.main_scroll.pack(
             side='top',
@@ -375,6 +377,15 @@ class OverlayApp:
             self.white_list_frame.pack(fill='x', pady=10, padx=5)
             self.wl_toggle_btn.configure(text="▼ 隠す")
         self.is_whitelist_open = not self.is_whitelist_open
+
+    def pin_to_all_desktops(self):
+        try:
+            import pyvda
+            hwnd = int(self.root.wm_frame(), 16)
+            view = pyvda.AppView(hwnd=hwnd)
+            view.pin()
+        except BaseException as e:
+            self.root.after(1000, self.pin_to_all_desktops)
 
     def disable_event(self):
         pass

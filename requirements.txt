@@ -1,0 +1,6 @@
+﻿uiautomation
+customtkinter
+filelock
+pyvda
+comtypes
+

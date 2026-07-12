@@ -37,11 +37,17 @@ class URLMonitor:
         self.block_list = config.get("BLOCK_LIST", [])
         self.url_cache = {}
 
-    def _perform_block(self, window):
+    def _perform_block(self, hwnd):
         try:
-            if "Chrome_WidgetWin_1" in window.ClassName:
-                window.SetFocus()
-                window.SendKeys('{Ctrl}w')
+            fg_hwnd = ctypes.windll.user32.GetForegroundWindow()
+            if fg_hwnd == hwnd:
+                import uiautomation as auto
+                auto.SetGlobalSearchTimeout(1.0)
+                win_ctrl = auto.WindowControl(searchDepth=1, Handle=hwnd)
+                win_ctrl.SetFocus()
+                win_ctrl.SendKeys('{Ctrl}w')
+            else:
+                ctypes.windll.user32.PostMessageW(hwnd, 0x0010, 0, 0)
         except BaseException:
             pass
 
@@ -73,38 +79,43 @@ class URLMonitor:
             return "yahoo.co.jp"
         return None
 
-    def _extract_url(self, window):
-        edit = auto.EditControl(searchFromControl=window, AccessKey="Ctrl+L")
-        if edit.Exists(0, 0):
-            try:
-                val = edit.GetValuePattern().Value
-                if val:
-                    return val
-            except BaseException:
-                pass
+    def _extract_url(self, hwnd, title):
+        import uiautomation as auto
+        auto.SetGlobalSearchTimeout(0.2)
+        try:
+            window = auto.WindowControl(searchDepth=1, Handle=hwnd)
+            edit = auto.EditControl(searchFromControl=window, AccessKey="Ctrl+L")
+            if edit.Exists(0, 0):
+                try:
+                    val = edit.GetValuePattern().Value
+                    if val:
+                        return val
+                except BaseException:
+                    pass
 
-        edit = window.Control(
-            ControlType=auto.ControlType.EditControl,
-            Name="アドレスと検索バー",
-            searchDepth=6)
-        if not edit.Exists(0, 0):
             edit = window.Control(
                 ControlType=auto.ControlType.EditControl,
-                Name="Address and search bar",
+                Name="アドレスと検索バー",
                 searchDepth=6)
-        if not edit.Exists(0, 0):
-            edit = window.EditControl()
+            if not edit.Exists(0, 0):
+                edit = window.Control(
+                    ControlType=auto.ControlType.EditControl,
+                    Name="Address and search bar",
+                    searchDepth=6)
+            if not edit.Exists(0, 0):
+                edit = window.EditControl()
 
-        if edit.Exists(0, 0):
-            try:
-                val = edit.GetValuePattern().Value
-                if val:
-                    return val
-            except BaseException:
-                pass
+            if edit.Exists(0, 0):
+                try:
+                    val = edit.GetValuePattern().Value
+                    if val:
+                        return val
+                except BaseException:
+                    pass
+        except BaseException:
+            pass
 
-        # UIAutomationによるURL抽出が仮想デスクトップ切り替え等で失敗した場合のフォールバック
-        return self._extract_url_from_title(window.Name)
+        return self._extract_url_from_title(title)
 
     def start(self):
         last_check_time = time.time()
@@ -114,25 +125,27 @@ class URLMonitor:
                 elapsed_seconds = now - last_check_time
                 last_check_time = now
 
-                root = auto.GetRootControl()
-                children = root.GetChildren()
+                hwnds = []
+                def get_hwnd(hwnd, lParam):
+                    length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+                    buff = ctypes.create_unicode_buffer(length + 1)
+                    ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
+                    if 'Google Chrome' in buff.value and ctypes.windll.user32.IsWindowVisible(hwnd):
+                        class_buff = ctypes.create_unicode_buffer(256)
+                        ctypes.windll.user32.GetClassNameW(hwnd, class_buff, 256)
+                        if 'Chrome_WidgetWin_1' in class_buff.value:
+                            hwnds.append((hwnd, buff.value))
+                    return True
+
+                EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+                ctypes.windll.user32.EnumWindows(EnumWindowsProc(get_hwnd), 0)
 
                 status_priority = 0
                 status_text = "💤  Idle"
                 counted_domains = set()
 
-                for window in children:
-                    if "Chrome_WidgetWin_1" not in window.ClassName:
-                        continue
-
-                    hwnd = window.NativeWindowHandle
-                    current_url = ""
-
-                    # 仮想デスクトップや最小化状態でもカウント・ブロックの対象にするためスキップしない
-                    # if ctypes.windll.user32.IsIconic(hwnd) or is_window_cloaked(hwnd):
-                    #     continue
-
-                    current_url = self._extract_url(window)
+                for hwnd, title in hwnds:
+                    current_url = self._extract_url(hwnd, title)
 
                     if not current_url:
                         continue
@@ -152,7 +165,7 @@ class URLMonitor:
                     if blocked_word:
                         status_text = f"🚫  BLOCKED: {blocked_word}"
                         status_priority = 4
-                        self._perform_block(window)
+                        self._perform_block(hwnd)
                         continue
 
                     limited_domain = next(
@@ -169,7 +182,7 @@ class URLMonitor:
                         if used >= limit:
                             status_text = f"⌛  TIME UP: {limited_domain}"
                             status_priority = 3
-                            self._perform_block(window)
+                            self._perform_block(hwnd)
                         else:
                             if status_priority < 2:
                                 status_text = f"⏱  Counting: {limited_domain}"
