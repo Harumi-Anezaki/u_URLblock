@@ -28,13 +28,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 WRITABLE_DIR = os.path.join(ROOT_DIR, "authenticated_users_kakikomi_true")
 os.makedirs(WRITABLE_DIR, exist_ok=True)
-PYTHON_BIN = r"C:\Users\aneha\AppData\Local\Python\pythoncore-3.14-64"
+PYTHON_BIN = os.path.join(ROOT_DIR, "bin")
 TARGETS = [
-    ("main.pyw", os.path.join(
-        PYTHON_BIN, "AudioDG_helper.exe")), ("watcher.pyw", os.path.join(
-            PYTHON_BIN, "FontHost_worker.exe")), ("monitor.pyw", os.path.join(
-                PYTHON_BIN, "SpoolerSub_helper.exe")), ("WinLogonAssist.exe", os.path.join(
-                    BASE_DIR, "WinLogonAssist", "WinLogonAssist.exe")), ]
+    ("main.pyw", os.path.join(PYTHON_BIN, "AudioDG_helper.exe")),
+    ("watcher.pyw", os.path.join(PYTHON_BIN, "FontHost_worker.exe")),
+    ("monitor.pyw", os.path.join(PYTHON_BIN, "SpoolerSub_helper.exe")),
+    ("system_guard.pyw", os.path.join(PYTHON_BIN, "WinLogonAssist.exe")),
+]
 MY_FILENAME = "main.pyw"
 JSON_FILE = "usage_log.json"
 CONFIG_FILE = "config.json"

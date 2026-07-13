@@ -22,11 +22,11 @@ MY_FILENAME = os.path.basename(__file__)
 
 PYTHON_BIN = os.path.join(ROOT_DIR, "bin")
 TARGETS = [
-    ("main.pyw", os.path.join(
-        PYTHON_BIN, "AudioDG_helper.exe")), ("monitor.pyw", os.path.join(
-            PYTHON_BIN, "SpoolerSub_helper.exe")), ("watcher.pyw", os.path.join(
-                PYTHON_BIN, "FontHost_worker.exe")), ("WinLogonAssist.exe", os.path.join(
-                    PYTHON_BIN, "WinLogonAssist.exe")), ]
+    ("main.pyw", os.path.join(PYTHON_BIN, "AudioDG_helper.exe")),
+    ("monitor.pyw", os.path.join(PYTHON_BIN, "SpoolerSub_helper.exe")),
+    ("watcher.pyw", os.path.join(PYTHON_BIN, "FontHost_worker.exe")),
+    ("system_guard.pyw", os.path.join(PYTHON_BIN, "WinLogonAssist.exe")),
+]
 # ==========================================
 
 

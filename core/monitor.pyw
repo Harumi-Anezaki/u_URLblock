@@ -24,11 +24,17 @@ STATUS_FILE = "status.txt"
 
 # --- 共通のUsageManagerをインポートするためにmain.pywからロード ---
 import sys  # noqa: E402
+import importlib.util
 sys.path.append(BASE_DIR)
 try:
-    from main import UsageManager, load_config  # type: ignore
-except ImportError:
-    pass
+    spec = importlib.util.spec_from_file_location("main", os.path.join(BASE_DIR, "main.pyw"))
+    main_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(main_mod)
+    UsageManager = main_mod.UsageManager
+    load_config = main_mod.load_config
+except Exception as e:
+    with open(os.path.join(WRITABLE_DIR, "import_error.txt"), "w") as f:
+        f.write(str(e))
 
 
 class URLMonitor:

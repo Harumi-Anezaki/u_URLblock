@@ -101,7 +101,7 @@ def ensure_processes_running():
 def main():
     ERROR_ALREADY_EXISTS = 183
     mutex = ctypes.windll.kernel32.CreateMutexW(
-        None, False, "URLBlocker_Guard_Mutex_07")  # noqa: F841
+        None, False, "URLBlocker_Guard_Mutex_08")  # noqa: F841
     last_err = ctypes.get_last_error()
     if last_err == ERROR_ALREADY_EXISTS:
         return
