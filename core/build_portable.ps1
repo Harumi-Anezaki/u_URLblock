@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $BIN_DIR = "bin"
 $PYTHON_ZIP = "python-3.11.9-embed-amd64.zip"
@@ -26,7 +26,7 @@ Write-Host "Downloading get-pip.py..."
 Invoke-WebRequest -Uri $GET_PIP_URL -OutFile "$BIN_DIR\get-pip.py"
 
 Write-Host "Installing pip..."
-Start-Process -FilePath "$BIN_DIR\python.exe" -ArgumentList "get-pip.py" -Wait -NoNewWindow
+Start-Process -FilePath "$BIN_DIR\python.exe" -ArgumentList "$BIN_DIR\get-pip.py" -Wait -NoNewWindow
 Remove-Item "$BIN_DIR\get-pip.py"
 
 Write-Host "Installing dependencies..."
