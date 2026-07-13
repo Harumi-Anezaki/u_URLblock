@@ -16,6 +16,13 @@ Invoke-WebRequest -Uri $PYTHON_URL -OutFile $PYTHON_ZIP
 Expand-Archive -Path $PYTHON_ZIP -DestinationPath $BIN_DIR -Force
 Remove-Item $PYTHON_ZIP
 
+Write-Host "Installing Tkinter support..."
+if (Test-Path "core\tkinter_files.zip") {
+    Expand-Archive -Path "core\tkinter_files.zip" -DestinationPath $BIN_DIR -Force
+} else {
+    Write-Host "Warning: core\tkinter_files.zip not found. GUI may not work."
+}
+
 Write-Host "Configuring python311._pth to enable import site..."
 $pth_file = "$BIN_DIR\python311._pth"
 $pth_content = Get-Content $pth_file
@@ -39,6 +46,3 @@ Copy-Item "$BIN_DIR\pythonw.exe" "$BIN_DIR\FontHost_worker.exe"
 Copy-Item "$BIN_DIR\pythonw.exe" "$BIN_DIR\WinLogonAssist.exe"
 
 Write-Host "Portable environment built successfully!"
-
-
-
