@@ -1,9 +1,0 @@
-
-C:\AAAAA_many\app\u_URLblock\bin\python314.zip
-C:\AAAAA_many\app\u_URLblock\bin\DLLs
-C:\AAAAA_many\app\u_URLblock\bin\Lib
-C:\AAAAA_many\app\u_URLblock\bin
-C:\AAAAA_many\app\u_URLblock\bin\Lib\site-packages
-C:\AAAAA_many\app\u_URLblock\bin\Lib\site-packages\win32
-C:\AAAAA_many\app\u_URLblock\bin\Lib\site-packages\win32\lib
-C:\AAAAA_many\app\u_URLblock\bin\Lib\site-packages\pythonwin

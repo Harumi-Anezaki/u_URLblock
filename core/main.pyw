@@ -3,6 +3,10 @@ import subprocess
 import os
 import sys
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 # Embeddable Python環境でTkinterを動かすためのパス設定
 tcl_lib = os.path.join(os.path.dirname(sys.executable), "tcl", "tcl8.6")
 tk_lib = os.path.join(os.path.dirname(sys.executable), "tcl", "tk8.6")
@@ -10,6 +14,16 @@ if os.path.exists(tcl_lib):
     os.environ["TCL_LIBRARY"] = tcl_lib
 if os.path.exists(tk_lib):
     os.environ["TK_LIBRARY"] = tk_lib
+
+# Embeddable Python (ignore_environment=True) では環境変数が無視されるため、
+# libフォルダにtclフォルダの中身をコピーしてTkinterが自動検知できるようにする
+lib_tcl_dir = os.path.join(os.path.dirname(sys.executable), "Lib", "tcl8.6")
+if getattr(sys.flags, "ignore_environment", 0) and not os.path.exists(lib_tcl_dir):
+    import shutil
+    try:
+        shutil.copytree(os.path.join(os.path.dirname(sys.executable), "tcl"), os.path.join(os.path.dirname(sys.executable), "Lib"), dirs_exist_ok=True)
+    except Exception:
+        pass
 
 import json
 import datetime

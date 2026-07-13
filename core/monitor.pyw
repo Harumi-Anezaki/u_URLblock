@@ -5,6 +5,11 @@ import sys
 import threading
 from urllib.parse import urlparse
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+
 if sys.stdout is None:
     class DummyStream:
         def write(self, text): pass

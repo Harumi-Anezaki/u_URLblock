@@ -1,10 +1,14 @@
-# -*- coding: utf-8 -*-
 import time
 import subprocess
 import os
 import sys
 import ctypes
 from ctypes import wintypes
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 
 if sys.stdout is None:
     class DummyStream:
