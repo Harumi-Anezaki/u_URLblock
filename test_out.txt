@@ -1,4 +1,0 @@
-sys.executable: C:\AAAAA_many\app\u_URLblock\bin\python.exe
-tcl_lib: C:\AAAAA_many\app\u_URLblock\bin\tcl\tcl8.6 exists: True
-os.environ['TCL_LIBRARY']: C:\AAAAA_many\app\u_URLblock\bin\tcl\tcl8.6
-Tkinter initialized successfully!
