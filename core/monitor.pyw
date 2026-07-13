@@ -101,7 +101,20 @@ class URLMonitor:
                 continue
             clean_domain = domain.split('/')[0]
             parts = clean_domain.split('.')
-            main_part = parts[0] if parts[0] != 'www' else parts[1]
+            
+            # メインドメインを正しく抽出する処理
+            if len(parts) >= 2:
+                # .co.jp などの場合の処理
+                if parts[-2] in ['co', 'ne', 'ac', 'or', 'go', 'com', 'org', 'net'] and parts[-1] in ['jp', 'uk', 'au', 'tw', 'cz']:
+                    if len(parts) >= 3:
+                        main_part = parts[-3]
+                    else:
+                        main_part = parts[-2]
+                else:
+                    main_part = parts[-2]
+            else:
+                main_part = parts[0]
+                
             if len(main_part) > 2 and main_part in title_no_spaces:
                 return domain
                 
