@@ -140,6 +140,9 @@ class URLMonitor:
 
         return self._extract_url_from_title(title)
 
+    def _is_limited(self, url):
+        return next((d for d in self.time_limits if d in url), None)
+
     def start(self):
         last_check_time = time.time()
         while True:
@@ -168,9 +171,15 @@ class URLMonitor:
                 status_priority = 0
                 status_text = "💤  Idle"
                 counted_domains = set()
+                new_url_cache = {}
 
                 for hwnd, title in hwnds:
-                    current_url = self._extract_url(hwnd, title)
+                    cache_key = (hwnd, title)
+                    if cache_key in self.url_cache:
+                        current_url = self.url_cache[cache_key]
+                    else:
+                        current_url = self._extract_url(hwnd, title)
+                    new_url_cache[cache_key] = current_url
 
                     if not current_url:
                         continue
@@ -217,16 +226,25 @@ class URLMonitor:
                             status_text = "✅  Safe Browsing"
                             status_priority = 1
 
+                self.url_cache = new_url_cache
+
                 # ステータスをファイルに書き出してGUI側に伝える
                 with open(os.path.join(WRITABLE_DIR, STATUS_FILE), "w", encoding='utf-8') as f:
                     f.write(status_text)
+                    
+                loop_time = time.time() - now
+                if loop_time > 1.0:
+                    with open(os.path.join(WRITABLE_DIR, "monitor_slow.txt"), "a") as f:
+                        f.write(f"SLOW LOOP: {loop_time:.2f}s\n")
 
             except Exception as e:
                 import traceback
                 with open(os.path.join(WRITABLE_DIR, "loop_error.txt"), "a", encoding="utf-8") as err_f:
                     err_f.write(traceback.format_exc() + "\n")
 
-            time.sleep(1.0)
+            sleep_time = 1.0 - (time.time() - now)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
 
 
 def main():

@@ -110,7 +110,7 @@ class UsageManager:
         try:
             with self.lock.acquire(timeout=2):
                 if not os.path.exists(self.filepath):
-                    return reset_and_save()
+                    return reset_and_save(is_penalty=True)
 
                 try:
                     with open(self.filepath, 'r', encoding='utf-8') as f:
@@ -170,6 +170,7 @@ class UsageManager:
             pass
 
     def add_usage(self, domain, seconds):
+        self.data = self.load_data()
         today_str = datetime.date.today().isoformat()
         if self.data["date"] != today_str:
             self.data = {
@@ -394,7 +395,7 @@ class OverlayApp:
 
         # 別プロセスのモニターが更新した利用時間データを再読み込み
         self.manager.data = self.manager.load_data()
-
+        
         for domain, limit in self.time_limits.items():
             used = self.manager.get_usage(domain)
             remaining = max(0, limit - used)
@@ -410,13 +411,7 @@ class OverlayApp:
                 lbl.configure(text="Time Up", text_color="#ff4a4a")
                 pb.configure(progress_color="#ff4a4a")
             else:
-                lbl.configure(
-                    text=f"{
-                        rem_min:02}:{
-                        rem_sec:02}",
-                    text_color=(
-                        "#1f538d",
-                        "#5da2ed"))
+                lbl.configure(text=f"{rem_min:02d}:{rem_sec:02d}", text_color="#ffffff")
                 if fraction > 0.8:
                     pb.configure(progress_color="#e6a23c")
                 else:
@@ -432,7 +427,7 @@ class OverlayApp:
         except BaseException:
             pass
 
-        self.root.after(1000, self.update_gui)
+        self.root.after(200, self.update_gui)
 
     def set_status(self, text):
         self.status_var.set(text)
