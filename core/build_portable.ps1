@@ -27,6 +27,7 @@ Write-Host "Configuring python311._pth to enable import site..."
 $pth_file = "$BIN_DIR\python311._pth"
 $pth_content = Get-Content $pth_file
 $pth_content = $pth_content -replace "#import site", "import site"
+$pth_content += "Lib"
 Set-Content -Path $pth_file -Value $pth_content
 
 Write-Host "Downloading get-pip.py..."

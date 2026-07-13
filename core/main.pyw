@@ -1,6 +1,16 @@
 import time
 import subprocess
 import os
+import sys
+
+# Embeddable Python環境でTkinterを動かすためのパス設定
+tcl_lib = os.path.join(os.path.dirname(sys.executable), "tcl", "tcl8.6")
+tk_lib = os.path.join(os.path.dirname(sys.executable), "tcl", "tk8.6")
+if os.path.exists(tcl_lib):
+    os.environ["TCL_LIBRARY"] = tcl_lib
+if os.path.exists(tk_lib):
+    os.environ["TK_LIBRARY"] = tk_lib
+
 import json
 import datetime
 import random
