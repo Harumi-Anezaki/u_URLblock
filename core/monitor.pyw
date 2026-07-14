@@ -103,17 +103,26 @@ class URLMonitor:
             parts = clean_domain.split('.')
             
             # メインドメインを正しく抽出する処理
+            base_idx = 0
             if len(parts) >= 2:
                 # .co.jp などの場合の処理
                 if parts[-2] in ['co', 'ne', 'ac', 'or', 'go', 'com', 'org', 'net'] and parts[-1] in ['jp', 'uk', 'au', 'tw', 'cz']:
                     if len(parts) >= 3:
                         main_part = parts[-3]
+                        base_idx = -3
                     else:
                         main_part = parts[-2]
+                        base_idx = -2
                 else:
                     main_part = parts[-2]
+                    base_idx = -2
             else:
                 main_part = parts[0]
+                base_idx = 0
+                
+            # googleなどの汎用ドメインで、サブドメインが指定されている場合はサブドメインをマッチング対象にする
+            if main_part in ['google', 'yahoo', 'amazon', 'bing', 'naver', 'yandex', 'baidu'] and base_idx != 0 and abs(base_idx) < len(parts):
+                main_part = parts[base_idx - 1]
                 
             if len(main_part) > 2 and main_part in title_no_spaces:
                 return domain
