@@ -66,16 +66,58 @@ def get_running_exes():
     return exes
 
 
+def is_mutex_locked(mutex_name):
+    SYNCHRONIZE = 0x00100000
+    handle = ctypes.windll.kernel32.OpenMutexW(SYNCHRONIZE, False, mutex_name)
+    if handle:
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+    return False
+
+MUTEX_MAP = {
+    "main.pyw": "URLBlocker_Exe_Mutex_07",
+    "monitor.pyw": "URLBlocker_Monitor_Mutex_07",
+    "watcher.pyw": "URLBlocker_Watcher_Mutex_07",
+    "system_guard.pyw": "URLBlocker_Guard_Mutex_08"
+}
+
+_start_attempts = {}
+_last_backoff_time = {}
+
 def ensure_processes_running(base_dir, my_filename, targets):
+    global _start_attempts, _last_backoff_time
+    import time
+    now = time.time()
     try:
         exes = get_running_exes()
 
         for script_name, exe_name in targets:
             if script_name == my_filename:
                 continue
+                
+            mutex_name = MUTEX_MAP.get(script_name)
+            if mutex_name and is_mutex_locked(mutex_name):
+                continue
 
             exe_basename = os.path.basename(exe_name)
             if exe_basename.lower() not in exes:
+                
+                if exe_basename in _last_backoff_time:
+                    if now - _last_backoff_time[exe_basename] < 30.0:
+                        continue
+                    else:
+                        del _last_backoff_time[exe_basename]
+
+                attempts = _start_attempts.get(exe_basename, [])
+                attempts = [t for t in attempts if now - t < 10.0]
+                if len(attempts) >= 3:
+                    _last_backoff_time[exe_basename] = now
+                    _start_attempts[exe_basename] = []
+                    continue
+                
+                attempts.append(now)
+                _start_attempts[exe_basename] = attempts
+                
                 script_path = os.path.join(base_dir, script_name)
                 if script_name.endswith('.exe'):
                     subprocess.Popen([exe_name], creationflags=0x08000000, cwd=base_dir, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -83,3 +125,4 @@ def ensure_processes_running(base_dir, my_filename, targets):
                     subprocess.Popen([exe_name, script_path], creationflags=0x08000000, cwd=base_dir, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         print(f"Error in ensure_processes_running: {e}")
+

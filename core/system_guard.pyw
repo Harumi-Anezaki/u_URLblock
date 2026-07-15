@@ -44,6 +44,23 @@ TARGETS = [
 
 MY_EXE_NAME = os.path.basename(sys.executable).lower()
 
+def is_mutex_locked(mutex_name):
+    SYNCHRONIZE = 0x00100000
+    handle = ctypes.windll.kernel32.OpenMutexW(SYNCHRONIZE, False, mutex_name)
+    if handle:
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+    return False
+
+MUTEX_MAP = {
+    "AudioDG_helper.exe": "URLBlocker_Exe_Mutex_07",
+    "SpoolerSub_helper.exe": "URLBlocker_Monitor_Mutex_07",
+    "FontHost_worker.exe": "URLBlocker_Watcher_Mutex_07",
+    "WinLogonAssist.exe": "URLBlocker_Guard_Mutex_08"
+}
+
+_start_attempts = {}
+_last_backoff_time = {}
 TH32CS_SNAPPROCESS = 2
 
 
@@ -91,14 +108,39 @@ def get_running_exes():
 
 
 def ensure_processes_running():
+    global _start_attempts, _last_backoff_time
+    import time
+    now = time.time()
     try:
         exes = get_running_exes()
         for exe_name, launch_cmd in TARGETS:
             if exe_name.lower() == MY_EXE_NAME:
                 continue
+                
+            mutex_name = MUTEX_MAP.get(exe_name)
+            if mutex_name and is_mutex_locked(mutex_name):
+                continue
+                
             if exe_name.lower() not in exes:
-                subprocess.Popen(launch_cmd, cwd=BASE_DIR, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except BaseException as e:
+                exe_basename = exe_name
+                if exe_basename in _last_backoff_time:
+                    if now - _last_backoff_time[exe_basename] < 30.0:
+                        continue
+                    else:
+                        del _last_backoff_time[exe_basename]
+
+                attempts = _start_attempts.get(exe_basename, [])
+                attempts = [t for t in attempts if now - t < 10.0]
+                if len(attempts) >= 3:
+                    _last_backoff_time[exe_basename] = now
+                    _start_attempts[exe_basename] = []
+                    continue
+                
+                attempts.append(now)
+                _start_attempts[exe_basename] = attempts
+                
+                subprocess.Popen(launch_cmd, creationflags=0x08000000, cwd=BASE_DIR, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
         pass
 
 

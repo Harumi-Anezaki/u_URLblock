@@ -99,6 +99,8 @@ class URLMonitor:
         for domain in all_domains:
             if 'notion' in domain.lower():
                 continue
+            
+            has_path = '/' in domain
             clean_domain = domain.split('/')[0]
             parts = clean_domain.split('.')
             
@@ -125,7 +127,10 @@ class URLMonitor:
                 main_part = parts[base_idx - 1]
                 
             if len(main_part) > 2 and main_part in title_no_spaces:
-                return domain
+                if has_path:
+                    return clean_domain
+                else:
+                    return domain
                 
         return None
 
