@@ -1,13 +1,22 @@
+"""
+win_utils.py
+
+Windows API utility functions for window inspection (cloaking checks), process enumeration (Toolhelp32),
+mutex locking verification, and rate-limited background helper process invocation.
+"""
+
 import os
 import ctypes
 from ctypes import wintypes
 import subprocess
+from typing import Set, Dict, List, Tuple, Any
 
-TH32CS_SNAPPROCESS = 2
-DWMWA_CLOAKED = 14
+TH32CS_SNAPPROCESS: int = 2
+DWMWA_CLOAKED: int = 14
 
 
 class PROCESSENTRY32(ctypes.Structure):
+    """Windows API PROCESSENTRY32 structure for enumerating system processes."""
     _fields_ = [
         ("dwSize", wintypes.DWORD),
         ("cntUsage", wintypes.DWORD),
@@ -22,7 +31,16 @@ class PROCESSENTRY32(ctypes.Structure):
     ]
 
 
-def is_window_cloaked(hwnd):
+def is_window_cloaked(hwnd: int) -> bool:
+    """
+    Checks if a top-level Windows window is cloaked (e.g. background UWP application or virtual desktop).
+
+    Args:
+        hwnd (int): The window handle (HWND).
+
+    Returns:
+        bool: True if the window is cloaked/hidden by DWM, False otherwise.
+    """
     cloaked = wintypes.DWORD()
     try:
         res = ctypes.windll.dwmapi.DwmGetWindowAttribute(
@@ -38,7 +56,13 @@ def is_window_cloaked(hwnd):
     return False
 
 
-def get_running_exes():
+def get_running_exes() -> Set[str]:
+    """
+    Takes a snapshot of running system processes and returns their lowercase executable names.
+
+    Returns:
+        Set[str]: Set of running executable filenames.
+    """
     kernel32 = ctypes.windll.kernel32
     CreateToolhelp32Snapshot = kernel32.CreateToolhelp32Snapshot
     Process32First = kernel32.Process32First
@@ -52,7 +76,7 @@ def get_running_exes():
     pe32 = PROCESSENTRY32()
     pe32.dwSize = ctypes.sizeof(PROCESSENTRY32)
 
-    exes = set()
+    exes: Set[str] = set()
     if Process32First(hProcessSnap, ctypes.byref(pe32)):
         while True:
             try:
@@ -66,7 +90,16 @@ def get_running_exes():
     return exes
 
 
-def is_mutex_locked(mutex_name):
+def is_mutex_locked(mutex_name: str) -> bool:
+    """
+    Checks if a named Windows mutex is currently held by another running process.
+
+    Args:
+        mutex_name (str): The mutex name.
+
+    Returns:
+        bool: True if locked, False otherwise.
+    """
     SYNCHRONIZE = 0x00100000
     handle = ctypes.windll.kernel32.OpenMutexW(SYNCHRONIZE, False, mutex_name)
     if handle:
@@ -74,17 +107,28 @@ def is_mutex_locked(mutex_name):
         return True
     return False
 
-MUTEX_MAP = {
+
+MUTEX_MAP: Dict[str, str] = {
     "main.pyw": "URLBlocker_Exe_Mutex_07",
     "monitor.pyw": "URLBlocker_Monitor_Mutex_07",
     "watcher.pyw": "URLBlocker_Watcher_Mutex_07",
     "system_guard.pyw": "URLBlocker_Guard_Mutex_08"
 }
 
-_start_attempts = {}
-_last_backoff_time = {}
+_start_attempts: Dict[str, List[float]] = {}
+_last_backoff_time: Dict[str, float] = {}
 
-def ensure_processes_running(base_dir, my_filename, targets):
+
+def ensure_processes_running(base_dir: str, my_filename: str, targets: List[Tuple[str, str]]) -> None:
+    """
+    Checks the status of targeted background processes and restarts them if missing or terminated.
+    Applies rate limiting to prevent restart loops on continuous failure.
+
+    Args:
+        base_dir (str): Working directory path.
+        my_filename (str): Name of the calling script (skipped during checks).
+        targets (List[Tuple[str, str]]): List of (script_name, executable_path) targets to verify.
+    """
     global _start_attempts, _last_backoff_time
     import time
     now = time.time()
@@ -94,14 +138,14 @@ def ensure_processes_running(base_dir, my_filename, targets):
         for script_name, exe_name in targets:
             if script_name == my_filename:
                 continue
-                
+
             mutex_name = MUTEX_MAP.get(script_name)
             if mutex_name and is_mutex_locked(mutex_name):
                 continue
 
             exe_basename = os.path.basename(exe_name)
             if exe_basename.lower() not in exes:
-                
+
                 if exe_basename in _last_backoff_time:
                     if now - _last_backoff_time[exe_basename] < 30.0:
                         continue
@@ -114,10 +158,10 @@ def ensure_processes_running(base_dir, my_filename, targets):
                     _last_backoff_time[exe_basename] = now
                     _start_attempts[exe_basename] = []
                     continue
-                
+
                 attempts.append(now)
                 _start_attempts[exe_basename] = attempts
-                
+
                 script_path = os.path.join(base_dir, script_name)
                 if script_name.endswith('.exe'):
                     subprocess.Popen([exe_name], creationflags=0x08000000, cwd=base_dir, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -125,4 +169,3 @@ def ensure_processes_running(base_dir, my_filename, targets):
                     subprocess.Popen([exe_name, script_path], creationflags=0x08000000, cwd=base_dir, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         print(f"Error in ensure_processes_running: {e}")
-

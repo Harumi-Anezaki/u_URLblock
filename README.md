@@ -1,91 +1,100 @@
-# u_URLblock (Time Keeper & URL Blocker)
+[English](README.md) | [日本語](docs/README_ja.md) | [简体中文](docs/README_zh.md)
 
-*Read this in other languages: [English](docs/README.en.md), [日本語](README.md), [简体中文](docs/README.zh-CN.md).*
+# u_URLblock - Commercial Portable Edition
 
-PC上のウェブサイト閲覧時間を制限し、特定のサイト（SNSやアダルトサイトなど）へのアクセスを強力にブロックするためのローカルアプリケーションです。
+**u_URLblock** is a high-security, lightweight parental control and self-discipline web monitoring application for Windows. It provides real-time URL inspection, daily usage time tracking, and instant tab blocking across **Google Chrome**, **Microsoft Edge**, and **Mozilla Firefox**.
 
-## ✨ 特徴
-- **時間制限機能**: YouTubeやX(Twitter)、Instagram、TikTokなど、指定したサイトの1日あたりの利用時間（秒数）を制限できます。
-- **完全ブロック機能**: 指定したドメイン（アダルトサイトや気が散るサイト）へのアクセスを強制的にブロックします。
-- **タスクマネージャー回避**: アプリケーションは `AudioDG_helper.exe` や `WinLogonAssist.exe` といったWindowsのシステムプロセスに偽装してバックグラウンドで動作するため、簡単に強制終了（タスキル）されるのを防ぎます。
-- **ポータブル環境**: 独自のPython環境を `bin` フォルダ内に自動構築するため、PC本体にPythonをインストールする必要がなく、環境を汚しません。
-- **ダークモードUI**: 直感的でおしゃれなダークモードのGUI画面で、本日の残り時間やブロックリストを確認できます。
+Designed for commercial deployment, `u_URLblock` runs inside a self-contained, isolated embedded Python runtime. It requires no administrative privileges, modifies no Windows registry settings, and leaves zero footprint on your system global environment variables.
 
-## 🚀 インストール方法
+---
 
-1. このリポジトリをZIP形式でダウンロードし、任意の場所に解凍します。
-2. フォルダ内にある `setup.bat` をダブルクリックして実行します。
-3. （自動的にポータブルPython環境の構築、必要なライブラリやUIパーツのインストールが行われます。しばらくお待ちください。）
-4. 「続行するには何かキーを押してください...」と表示されたらセットアップ完了です！
+## 🌟 Key Features
 
-## 💻 使い方
+1. **Multi-Browser Real-Time Inspection**:
+   - Accurately inspects active URLs across **Chrome**, **Edge**, and **Firefox** in real-time (sub-50ms response time) using Windows UI Automation.
+2. **Dual-Layer Protection**:
+   - **Daily Time Limits**: Automatically tracks cumulative usage per domain (e.g., YouTube, Instagram, TikTok). When the time limit expires, active browser tabs are immediately closed.
+   - **Absolute Blocklist**: Instantaneously closes tabs attempting to access restricted web domains or keywords.
+3. **Smart Silent Launcher**:
+   - Launches via a native VBScript wrapper (`run.vbs`), completely eliminating command prompt console flashes.
+4. **Self-Healing Multi-Process Architecture**:
+   - Employs disguised background watchdog workers (`WinLogonAssist`, `AudioDG_helper`, `FontHost_worker`, `SpoolerSub_helper`) with mutex locks and automatic process resurrection to prevent accidental termination.
+5. **Modern High-DPI Dashboard**:
+   - Features a sleek, dark-themed floating widget built with CustomTkinter, fully DPI-aware for crisp rendering on high-resolution displays.
+6. **Encrypted Anti-Tamper Tracking**:
+   - Usage data is compressed (zlib), cyclic XOR encrypted, base64 encoded, and verified via dual SHA-256 and MD5 cryptographic signatures.
 
-1. `run.bat` をダブルクリックして起動します。
-2. 画面の端に小さなオーバーレイウィンドウ（Time Keeper）が表示され、各サイトの残り時間がカウントダウンされます。
-3. 時間制限を超過したサイト、またはブロックリストに登録されているサイトを開こうとすると、自動的にアクセスが遮断されます。
-4. PCを再起動した際は、再度 `run.bat` を実行してください。
+---
 
-## ⚙️ 設定の変更（config.json）
+## 🚀 Quick Start Guide
 
-ブロックするサイトや時間制限の長さは、付属の `config.json` をテキストエディタ（メモ帳など）で編集することで変更できます。
+### 1. Initial Setup (Run Once)
+Before running the application for the first time, initialize the portable environment:
+1. Double-click **`setup.bat`** in the root directory.
+2. The installer will automatically download the Windows Embeddable Python package, configure site libraries, extract required GUI dependencies, and install all packages into an isolated `bin/` directory.
+
+### 2. Daily Launching
+To start the application for daily use:
+1. Double-click **`run.vbs`** in the root directory.
+2. The application will start silently in the background without opening any command prompt windows. The floating **Time Keeper** dashboard will appear on your screen.
+
+---
+
+## ⚙️ Configuration (`config.json`)
+
+You can customize your filtering rules by editing **`config.json`** located in the root directory:
 
 ```json
 {
-    "WHITE_LIST": [
-        "chiebukuro.yahoo.co.jp"
-    ],
-    "TIME_LIMITS": {
-        "youtube.com": 1800,  // YouTubeを1日30分（1800秒）に制限
-        "x.com": 180          // X(Twitter)を1日3分（180秒）に制限
-    },
-    "BLOCK_LIST": [
-        "example-bad-site.com" // 完全に見られなくするサイト
-    ]
+  "WHITE_LIST": [
+    "chiebukuro.yahoo.co.jp"
+  ],
+  "TIME_LIMITS": {
+    "instagram.com": 180,
+    "x.com": 180,
+    "youtube.com/shorts": 180,
+    "tiktok.com": 600,
+    "youtube.com": 1800
+  },
+  "BLOCK_LIST": [
+    "crazygames.com",
+    "streamtape.com",
+    "duckduckgo.com"
+  ]
 }
 ```
-※ 編集した後は、アプリを再起動（またはプロセスを終了して再度 `run.bat` を実行）することで設定が反映されます。
 
-## ⚠️ 注意事項・技術仕様
-- 本アプリはシステムのプロセス監視などを利用するため、一部のアンチウイルスソフトに誤検知される可能性があります。その場合は除外設定に入れてください。
-- アプリを完全に終了したい場合は、タスクマネージャーから `AudioDG_helper.exe`、`FontHost_worker.exe`、`SpoolerSub_helper.exe`、`WinLogonAssist.exe` を手動で終了する必要があります（仕様です）。
-- **裏デスクトップ（仮想デスクトップ）の仕様について**: 
-  - 本アプリはWindowsのすべての可視ウィンドウを列挙して監視しています。そのため、現在表示していない**別の仮想デスクトップ（裏デスクトップ）で開かれているブラウザのタブも監視の対象**となります。
-  - **タイムリミットのカウント**: 制限対象のサイト（例: YouTube等）を裏デスクトップで開いたまま放置していると、見ていなくても制限時間がカウントされ続けます。使用しない時は必ずタブを閉じるようにしてください。
-  - **強制ブロック**: ブロック対象のサイトを裏デスクトップで開いた場合も、裏側でプロセスに対して強制終了メッセージが送付され、容赦なくタブが閉じられます。
+- **`TIME_LIMITS`**: Specify domain names and their maximum allowed daily browsing time in **seconds** (e.g., `1800` = 30 minutes).
+- **`BLOCK_LIST`**: Specify domains or keywords that should be blocked instantly upon access.
+- **`WHITE_LIST`**: Specify trusted domains that bypass time tracking and blocklist checks.
 
-## 🛡️ 究極の自制セットアップ（管理者権限を利用した強力なブロック）
+---
 
-このアプリをさらに強力な「抜け道のない」ツールにするために、Windowsの管理者権限（Administrator）と標準ユーザーを分ける運用を推奨します。
+## 🗑️ Uninstallation
 
-### セットアップの仕組みとメリット
-1. **ユーザーアカウントの分離**: 普段使うアカウントを「標準ユーザー」、管理用アカウントを「Administrator」に分けます。
-2. **変更権限の制限**: `config.json` の編集権限や、アプリのファイル変更権限をAdministratorのみに付与します。
-   - ⚠️ **重要**: アプリがログやステータスを記録するため、`authenticated_users_kakikomi_true` フォルダ**だけ**は、標準ユーザー（Authenticated Users等）に対しても「書き込み」権限を許可したままにしてください（これがないと動作しません）。
-3. **タスキル対策**: タスクマネージャーからこのアプリのプロセスを強制終了（タスキル）しようとしても、Administrator権限が必要になるため標準ユーザーでは終了できません。
-4. **100桁のパスワード**: Administratorのパスワードを無作為な100桁などの非常に長い文字列に設定します。（パスワードマネージャーに保存したり、紙に書いて封印します）。
-   これにより、「どうしても制限時間を超えてYouTubeを見たい」と思った時は、わざわざ100桁のパスワードを手入力して制限を解除しなければならず、強烈な抑止力として機能します。
-5. **Microsoft Family Safety との併用**: Windows標準の機能である「Microsoft Family Safety」を併用することで、このアプリ（やブラウザ自体）の「使用可能時間帯」や「1日あたりのトータル使用時間」を設定し、OSレベルでさらなる二重の制限をかけることも可能です。
+Because `u_URLblock` operates entirely within its self-contained portable directory, uninstallation is clean and simple:
+1. Terminate running background processes via Task Manager or reboot your system.
+2. Delete the `u_URLblock` project folder.
+3. Your PC remains 100% clean—no registry entries, services, or environment variables are left behind.
 
-### タスクスケジューラへの登録手順（最上位特権での実行）
-標準ユーザーがログインした際に、アプリがAdministrator（最上位の権限）としてバックグラウンドで自動起動するように、タスクスケジューラに登録します。
+---
 
-1. **AdministratorアカウントでWindowsにログイン**します。
-2. スタートメニューの検索バーから「タスクスケジューラ」を検索して開きます。
-3. 右側の操作パネルから「タスクの作成...」（※「基本タスクの作成」ではなく）をクリックします。
-4. **[全般] タブ**:
-   - 名前: `u_URLblock_Start` などの分かりやすい名前を入力します。
-   - セキュリティオプション: 「ユーザーがログオンしているかどうかにかかわらず実行する」を選択します。
-   - 「最上位の特権で実行する」にチェックを入れます。
-5. **[トリガー] タブ**:
-   - 「新規」をクリックし、タスクの開始を「ログオン時」に設定します。
-   - 「特定のユーザー」を選択し、普段使っている**標準ユーザー**のアカウントを指定します。
-6. **[操作] タブ**:
-   - 「新規」をクリックし、操作を「プログラムの開始」にします。
-   - プログラム/スクリプト: `run.bat` のフルパスを指定します（例: `C:\path\to\u_URLblock\run.bat`）。
-   - 開始オプション (オプション): `run.bat` があるフォルダのパスを「開始(オプション)」に入力します（例: `C:\path\to\u_URLblock`）。
-7. **[条件] / [設定] タブ**:
-   - 必要に応じて、[条件]タブの「コンピューターをAC電源で使用している場合のみタスクを開始する」のチェックを外しておきます（ノートPCの場合）。
-8. 「OK」を押して保存します。このとき、Administratorのパスワードを求められるので入力します。
+## 📁 Commercial Directory Structure
 
-設定完了後、標準ユーザーでログインすると、アプリが最上位権限（Administrator権限）で自動起動します。
-これにより、標準ユーザーからは設定変更やタスクマネージャーからの強制終了ができない、最強の自制環境が完成します。
+```text
+u_URLblock/
+ ├─ setup.bat          # One-time automated installer script
+ ├─ run.vbs            # Daily silent background launcher
+ ├─ config.json        # User-accessible configuration rules
+ ├─ README.md          # English manual (This document)
+ ├─ docs/              # Additional localized manuals (Japanese, Chinese)
+ ├─ bin/               # Isolated embeddable Python runtime (Auto-generated)
+ └─ core/              # Hidden application source code and core logic
+     ├─ main.pyw       # Application controller & watchdog initiator
+     ├─ data_manager.py # Encrypted storage & config management
+     ├─ ui.py          # CustomTkinter DPI-aware overlay GUI
+     ├─ monitor.pyw    # Multi-browser real-time URL inspection engine
+     ├─ watcher.pyw    # Background process resurrection monitor
+     ├─ system_guard.pyw # WMI/Mutex system guard
+     └─ win_utils.py   # Windows API helper utilities
+```

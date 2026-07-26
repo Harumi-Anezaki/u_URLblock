@@ -1,6 +1,23 @@
-﻿/bin/
+# Portable Python Environment
+bin/
+python-*.zip
+get-pip.py
 __pycache__/
+core/__pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Runtime logs and state
+authenticated_users_kakikomi_true/
 status.txt
 usage_log.json
+usage_log.json.lock
+guard_log.txt
+guard_fatal.txt
+monitor_slow.txt
+
+# IDE
 .vscode/
+.idea/
+*.swp

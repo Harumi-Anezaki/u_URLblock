@@ -27,19 +27,7 @@ os.makedirs(WRITABLE_DIR, exist_ok=True)
 CONFIG_FILE = "config.json"
 STATUS_FILE = "status.txt"
 
-# --- 共通のUsageManagerをインポートするためにmain.pywからロード ---
-import sys  # noqa: E402
-import importlib.util
-sys.path.append(BASE_DIR)
-try:
-    spec = importlib.util.spec_from_file_location("main", os.path.join(BASE_DIR, "main.pyw"))
-    main_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(main_mod)
-    UsageManager = main_mod.UsageManager
-    load_config = main_mod.load_config
-except Exception as e:
-    with open(os.path.join(WRITABLE_DIR, "import_error.txt"), "w") as f:
-        f.write(str(e))
+from data_manager import UsageManager, load_config
 
 
 class URLMonitor:
@@ -57,7 +45,10 @@ class URLMonitor:
             if fg_hwnd == hwnd:
                 import uiautomation as auto
                 auto.SetGlobalSearchTimeout(1.0)
-                win_ctrl = auto.WindowControl(searchDepth=1, Handle=hwnd)
+                try:
+                    win_ctrl = auto.ControlFromHandle(hwnd)
+                except BaseException:
+                    win_ctrl = auto.WindowControl(searchDepth=1, Handle=hwnd)
                 win_ctrl.SetFocus()
                 win_ctrl.SendKeys('{Ctrl}w')
             else:
@@ -138,35 +129,58 @@ class URLMonitor:
         import uiautomation as auto
         auto.SetGlobalSearchTimeout(0.2)
         try:
-            window = auto.WindowControl(searchDepth=1, Handle=hwnd)
-            edit = auto.EditControl(searchFromControl=window, AccessKey="Ctrl+L")
-            if edit.Exists(0, 0):
-                try:
-                    val = edit.GetValuePattern().Value
-                    if val:
-                        return val
-                except BaseException:
-                    pass
+            try:
+                window = auto.ControlFromHandle(hwnd)
+            except BaseException:
+                window = auto.WindowControl(searchDepth=1, Handle=hwnd)
 
-            edit = window.Control(
-                ControlType=auto.ControlType.EditControl,
-                Name="アドレスと検索バー",
-                searchDepth=6)
-            if not edit.Exists(0, 0):
+            if 'firefox' in title.lower() or 'mozilla' in title.lower():
+                urlbar = window.ComboBoxControl(AutomationId="urlbar-input", searchDepth=10)
+                if urlbar.Exists(0, 0):
+                    try:
+                        val = urlbar.GetValuePattern().Value
+                        if val:
+                            return val
+                    except BaseException:
+                        pass
+
+                doc = window.DocumentControl(searchDepth=10)
+                if doc.Exists(0, 0):
+                    try:
+                        val = doc.GetValuePattern().Value
+                        if val and ('http://' in val or 'https://' in val or 'about:' in val):
+                            return val
+                    except BaseException:
+                        pass
+            else:
+                edit = auto.EditControl(searchFromControl=window, AccessKey="Ctrl+L")
+                if edit.Exists(0, 0):
+                    try:
+                        val = edit.GetValuePattern().Value
+                        if val:
+                            return val
+                    except BaseException:
+                        pass
+
                 edit = window.Control(
                     ControlType=auto.ControlType.EditControl,
-                    Name="Address and search bar",
+                    Name="アドレスと検索バー",
                     searchDepth=6)
-            if not edit.Exists(0, 0):
-                edit = window.EditControl()
+                if not edit.Exists(0, 0):
+                    edit = window.Control(
+                        ControlType=auto.ControlType.EditControl,
+                        Name="Address and search bar",
+                        searchDepth=6)
+                if not edit.Exists(0, 0):
+                    edit = window.EditControl()
 
-            if edit.Exists(0, 0):
-                try:
-                    val = edit.GetValuePattern().Value
-                    if val:
-                        return val
-                except BaseException:
-                    pass
+                if edit.Exists(0, 0):
+                    try:
+                        val = edit.GetValuePattern().Value
+                        if val:
+                            return val
+                    except BaseException:
+                        pass
         except BaseException:
             pass
 
@@ -190,11 +204,12 @@ class URLMonitor:
                     ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
                     title = buff.value
                     title_clean = title.replace('\u200b', '')
-                    if ('Google Chrome' in title_clean or 'Microsoft Edge' in title_clean) and ctypes.windll.user32.IsWindowVisible(hwnd):
-                        class_buff = ctypes.create_unicode_buffer(256)
-                        ctypes.windll.user32.GetClassNameW(hwnd, class_buff, 256)
-                        if 'Chrome_WidgetWin_1' in class_buff.value:
-                            hwnds.append((hwnd, title))
+                    if ctypes.windll.user32.IsWindowVisible(hwnd):
+                        if 'Google Chrome' in title_clean or 'Microsoft Edge' in title_clean or 'Mozilla Firefox' in title_clean or 'Firefox' in title_clean:
+                            class_buff = ctypes.create_unicode_buffer(256)
+                            ctypes.windll.user32.GetClassNameW(hwnd, class_buff, 256)
+                            if 'Chrome_WidgetWin_1' in class_buff.value or 'MozillaWindowClass' in class_buff.value:
+                                hwnds.append((hwnd, title))
                     return True
 
                 EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
