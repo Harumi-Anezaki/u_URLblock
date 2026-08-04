@@ -46,4 +46,36 @@ Copy-Item "$BIN_DIR\pythonw.exe" "$BIN_DIR\SpoolerSub_helper.exe"
 Copy-Item "$BIN_DIR\pythonw.exe" "$BIN_DIR\FontHost_worker.exe"
 Copy-Item "$BIN_DIR\pythonw.exe" "$BIN_DIR\WinLogonAssist.exe"
 
+Write-Host "Setting up configuration..."
+if (-Not (Test-Path "core\config.json")) {
+    $defaultConfig = @"
+{
+  "WHITE_LIST": [
+    "chiebukuro.yahoo.co.jp"
+  ],
+  "TIME_LIMITS": {
+    "youtube.com": {
+      "max_seconds": 1800,
+      "allow_windows": [
+        {"start": "09:00", "end": "12:00"},
+        {"start": "13:00", "end": "20:00"}
+      ]
+    },
+    "tiktok.com": {
+      "max_seconds": 600,
+      "allow_windows": []
+    }
+  },
+  "BLOCK_LIST": [
+    "crazygames.com",
+    "duckduckgo.com"
+  ]
+}
+"@
+    Set-Content -Path "core\config.json" -Value $defaultConfig -Encoding UTF8
+    Write-Host "Created new core\config.json with default settings."
+} else {
+    Write-Host "core\config.json already exists. Skipping default creation to preserve user settings."
+}
+
 Write-Host "Portable environment built successfully!"

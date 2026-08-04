@@ -27,19 +27,66 @@ CONFIG_FILE: str = "config.json"
 
 def load_config() -> Dict[str, Any]:
     """
-    Loads the user configuration from config.json located in the project root directory.
+    Loads the user configuration from config.json located in the core directory.
 
     Returns:
         Dict[str, Any]: A dictionary containing WHITE_LIST, TIME_LIMITS, and BLOCK_LIST.
     """
-    config_path = os.path.join(ROOT_DIR, CONFIG_FILE)
+    config_path = os.path.join(BASE_DIR, CONFIG_FILE)
+    
     if not os.path.exists(config_path):
         return {"WHITE_LIST": [], "TIME_LIMITS": {}, "BLOCK_LIST": []}
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            cfg = json.load(f)
+            
+            # Normalize TIME_LIMITS
+            if "TIME_LIMITS" in cfg:
+                normalized = {}
+                for domain, value in cfg["TIME_LIMITS"].items():
+                    if isinstance(value, int):
+                        normalized[domain] = {"max_seconds": value, "allow_windows": []}
+                    elif isinstance(value, dict):
+                        normalized[domain] = {
+                            "max_seconds": value.get("max_seconds", 0),
+                            "allow_windows": value.get("allow_windows", [])
+                        }
+                cfg["TIME_LIMITS"] = normalized
+            else:
+                cfg["TIME_LIMITS"] = {}
+                
+            return cfg
     except Exception:
         return {"WHITE_LIST": [], "TIME_LIMITS": {}, "BLOCK_LIST": []}
+
+
+def save_config(config_dict: Dict[str, Any]) -> None:
+    """
+    Saves the user configuration back to config.json.
+
+    Args:
+        config_dict (Dict[str, Any]): The updated configuration dictionary.
+    """
+    config_path = os.path.join(BASE_DIR, CONFIG_FILE)
+    json_data = json.dumps(config_dict, indent=4, ensure_ascii=False)
+    
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write(json_data)
+    except PermissionError:
+        import tempfile
+        import ctypes
+        fd, temp_path = tempfile.mkstemp(suffix=".json")
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(json_data)
+            
+        cmd = f'/c copy /Y "{temp_path}" "{config_path}"'
+        res = ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", cmd, None, 0)
+        
+        if res <= 32:
+            raise Exception("管理者権限での保存がキャンセルされたか、失敗しました。")
+    except Exception as e:
+        raise e
 
 
 class FolderLocker:

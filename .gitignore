@@ -21,3 +21,7 @@ monitor_slow.txt
 .vscode/
 .idea/
 *.swp
+
+# Local Configuration
+config.json
+core/config.json

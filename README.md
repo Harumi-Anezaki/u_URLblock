@@ -19,8 +19,8 @@ Designed for commercial deployment, `u_URLblock` runs inside a self-contained, i
    - Launches via a native VBScript wrapper (`run.vbs`), completely eliminating command prompt console flashes.
 4. **Self-Healing Multi-Process Architecture**:
    - Employs disguised background watchdog workers (`WinLogonAssist`, `AudioDG_helper`, `FontHost_worker`, `SpoolerSub_helper`) with mutex locks and automatic process resurrection to prevent accidental termination.
-5. **Modern High-DPI Dashboard**:
-   - Features a sleek, dark-themed floating widget built with CustomTkinter, fully DPI-aware for crisp rendering on high-resolution displays.
+5. **Modern High-DPI Dashboard & Full GUI Settings Editor**:
+   - Features a sleek, dark-themed floating widget built with CustomTkinter, fully DPI-aware for crisp rendering on high-resolution displays. Includes a **Full GUI Settings Editor** that intelligently requests UAC elevation (Administrator password) only when saving changes to a write-protected `config.json`.
 6. **Encrypted Anti-Tamper Tracking**:
    - Usage data is compressed (zlib), cyclic XOR encrypted, base64 encoded, and verified via dual SHA-256 and MD5 cryptographic signatures.
 
@@ -49,7 +49,7 @@ To prevent an end-user (or yourself during a moment of weakness) from bypassing 
 
 1. **Administrators Account**:
    - Set the password for this account to an **extremely long, complex 100-character random password**. Seal or hide this password somewhere difficult to access (e.g., written on paper in a locked safe, held by a trusted friend or family member, or inside a complex password manager).
-   - Use this account exclusively for initial installation, configuration rule editing (`config.json`), and Windows Task Scheduler registration.
+   - Use this account exclusively for initial installation, configuration rule editing via the GUI, and Windows Task Scheduler registration.
 2. **Standard User Account**:
    - The end-user must log into Windows using this restricted **Standard User** profile for all daily work, studying, and browsing.
    - Without administrative privileges, standard users cannot terminate protected system-guard processes via Task Manager or alter automated scheduled tasks.
@@ -85,9 +85,11 @@ To guarantee that the monitoring engine launches automatically whenever the Stan
 
 ---
 
-## ⚙️ Configuration (`config.json`)
+## ⚙️ Configuration Rules
 
-You can customize your filtering rules by editing **`config.json`** located in the root directory:
+You can customize your filtering rules dynamically via the **GUI Settings Editor** (accessed from the dashboard's "⚙️ Settings" button). *Note: The configuration data is stored internally, so there is no need to edit configuration files manually.*
+
+*Security Note: If standard users are restricted from modifying the application folder via NTFS permissions, the GUI Settings Editor will automatically prompt for the Administrator password via UAC only when attempting to save.*
 
 ```json
 {
@@ -95,21 +97,26 @@ You can customize your filtering rules by editing **`config.json`** located in t
     "chiebukuro.yahoo.co.jp"
   ],
   "TIME_LIMITS": {
-    "instagram.com": 180,
-    "x.com": 180,
-    "youtube.com/shorts": 180,
-    "tiktok.com": 600,
-    "youtube.com": 1800
+    "youtube.com": {
+      "max_seconds": 1800,
+      "allow_windows": [
+        {"start": "09:00", "end": "12:00"},
+        {"start": "13:00", "end": "20:00"}
+      ]
+    },
+    "tiktok.com": 600
   },
   "BLOCK_LIST": [
     "crazygames.com",
-    "streamtape.com",
     "duckduckgo.com"
   ]
 }
 ```
 
-- **`TIME_LIMITS`**: Specify domain names and their maximum allowed daily browsing time in **seconds** (e.g., `1800` = 30 minutes).
+- **`TIME_LIMITS`**: 
+  - **`max_seconds`**: Maximum allowed daily browsing time in seconds (e.g., `1800` = 30 minutes).
+  - **`allow_windows`**: (Optional) Specific time windows during which access is permitted. Access outside these hours is instantly blocked.
+  - *Note: Specifying a simple integer (e.g. `600`) is still supported for backward compatibility.*
 - **`BLOCK_LIST`**: Specify domains or keywords that should be blocked instantly upon access.
 - **`WHITE_LIST`**: Specify trusted domains that bypass time tracking and blocklist checks.
 
@@ -165,12 +172,12 @@ Because `u_URLblock` operates entirely within its self-contained portable direct
 u_URLblock/
  ├─ setup.bat          # One-time automated installer script
  ├─ run.vbs            # Daily silent background launcher
- ├─ config.json        # User-accessible configuration rules
  ├─ README.md          # English manual (This document)
  ├─ docs/              # Additional localized manuals (Japanese, Chinese)
  ├─ bin/               # Isolated embeddable Python runtime (Auto-generated)
  ├─ authenticated_users_kakikomi_true/ # Runtime logs, IPC status, & encrypted storage (Auto-generated)
  └─ core/              # Hidden application source code and core logic
+     ├─ config.json    # Internally managed configuration data
      ├─ main.pyw       # Application controller & watchdog initiator
      ├─ data_manager.py # Encrypted storage & config management
      ├─ ui.py          # CustomTkinter DPI-aware overlay GUI
